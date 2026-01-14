@@ -1,4 +1,4 @@
-﻿namespace ControleDeGastosResidencias.Api.Models
+﻿namespace ControleDeGastosResidencias.Api.Models.Transacao
 {
     public class Transacao
     {
