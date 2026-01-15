@@ -71,7 +71,7 @@ namespace ControleDeGastosResidencias.Api.Data
                 entity.HasOne<Pessoa>()
                       .WithMany()
                       .HasForeignKey(t => t.PessoaId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Cascade);
 
             });
 

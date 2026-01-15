@@ -16,5 +16,12 @@
             Nome = nome;
             Idade = idade;
         }
+
+        public Pessoa(int id, string nome, int idade)
+        {
+            Id = id;
+            Nome = nome;
+            Idade = idade;
+        }
     }
 }
