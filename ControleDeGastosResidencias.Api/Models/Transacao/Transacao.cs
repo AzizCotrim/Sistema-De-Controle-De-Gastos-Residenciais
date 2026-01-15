@@ -9,6 +9,10 @@
         public int CategoriaId { get; private set; }
         public int PessoaId { get; private set; }
                 
+        private Transacao()
+        {
+        }
+
         public Transacao(string descricao, decimal valor, TipoTransacao tipo, int categoria, int pessoa)
         {
             Descricao = descricao;

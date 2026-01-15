@@ -7,6 +7,10 @@
         public string Nome { get; private set; }
         public int Idade { get; private set; }
 
+        private Pessoa()
+        {
+        }
+
         public Pessoa(string nome, int idade)
         {
             Nome = nome;

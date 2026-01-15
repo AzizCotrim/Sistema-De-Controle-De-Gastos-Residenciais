@@ -6,6 +6,10 @@
         public string Descricao { get; private set; }
         public TipoFinalidadeCategoria Finalidade { get; private set; }
 
+        private Categoria()
+        {
+        }
+
         public Categoria(string descricao, TipoFinalidadeCategoria finalidade)
         {
             Descricao = descricao;
