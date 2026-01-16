@@ -1,4 +1,6 @@
-﻿namespace ControleDeGastosResidencias.Api.DTOs.Transactions
+﻿using ControleDeGastosResidencias.Api.Models;
+
+namespace ControleDeGastosResidencias.Api.DTOs.Transactions
 {
     public class CategoriaResumoResponse
     {
