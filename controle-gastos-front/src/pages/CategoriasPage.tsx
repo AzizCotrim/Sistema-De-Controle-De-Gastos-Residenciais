@@ -17,7 +17,7 @@ export function CategoriaFormularioPage() {
             const data = await listarCategorias();
             setCategorias(data);
         } catch (e) {
-            setErro("Não foi possivel carregar as categorias");
+            setErro("Nao foi possivel carregar as categorias");
         } finally {
             setCarregando(false);
         }
@@ -27,12 +27,12 @@ export function CategoriaFormularioPage() {
         e.preventDefault(); //Evitar Reload da pagina
 
         if (!descricao.trim()) {
-            setErro("Descricao é obrigatória");
+            setErro("Descricao e obrigataria");
             return;
         }
 
         if (finalidade === null || finalidade === undefined){
-            setErro("Finalidade é obrigatória");
+            setErro("Finalidade e obrigataria");
             return;
         }
 
@@ -43,7 +43,7 @@ export function CategoriaFormularioPage() {
             setFinalidade(0);
             await carregar(); //recarregar lista
         } catch (e) {
-            setErro("Não foi possivel criar a categoria");
+            setErro("Nao foi possivel criar a categoria");
         }
 
     }
