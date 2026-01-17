@@ -1,5 +1,6 @@
 using ControleDeGastosResidencias.Api.Data;
 using ControleDeGastosResidencias.Api.Middlewares;
+using ControleDeGastosResidencias.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+//Services
+builder.Services.AddScoped<PessoaService>();
+builder.Services.AddScoped<CategoriaService>();
+builder.Services.AddScoped<TransacaoService>();
 
+//DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(connectionString));
