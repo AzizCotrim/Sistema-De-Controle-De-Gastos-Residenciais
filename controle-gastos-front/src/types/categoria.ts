@@ -6,7 +6,7 @@ export type CategoriaCreateRequest = {
 export type CategoriaResponse = {
     id: number;
     descricao: string;
-    finalidade: string;
+    finalidade: number;
 };
 
 export type CategoriaResumoResponse = {
