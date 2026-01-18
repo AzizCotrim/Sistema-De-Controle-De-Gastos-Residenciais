@@ -107,7 +107,7 @@ namespace ControleDeGastosResidencias.Api.Services
             var transacao = await _db.Transacoes.FirstOrDefaultAsync(t => t.Id == id);
 
             if (transacao == null)
-                throw new KeyNotFoundException("Categoria não Encontrada");
+                throw new KeyNotFoundException("Transacao não Encontrada");
 
             _db.Transacoes.Remove(transacao);
             await _db.SaveChangesAsync();

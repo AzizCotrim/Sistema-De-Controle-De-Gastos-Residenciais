@@ -1,54 +1,15 @@
 import { useEffect, useState } from "react";
-import { http } from "../api/http";
-import type { RelatorioPorPessoaResponse } from "../types/relatorio";
+import { criarPessoa, listarPessoas, deletarPessoa } from "../api/pessoas";
+import type { PessoaResponse } from "../types/pessoa";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
 
+export function PessoaFormularioPage() {
+  const [pessoas, setPessoas] = useState<PessoaResponse[]>([]);
+  const [nome, setNome] = useState("");
+  const [idadeStr, setIdadeStr] = useState("");
 
-function Card(props: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
-  return (
-    <section
-      style={{
-        border: "1px solid rgba(0,0,0,0.08)",
-        borderRadius: 14,
-        padding: 14,
-        background: "#fff",
-        color: "#111",
-        fontWeight: 500
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 14, color: "#111" }}>{props.title}</h3>
-        {props.right}
-      </div>
-      <div style={{ marginTop: 12 }}>{props.children}</div>
-    </section>
-  );
-}
-
-function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      {...props}
-      style={{
-        borderRadius: 12,
-        padding: "10px 12px",
-        border: "1px solid rgba(0,0,0,0.12)",
-        background: "#eaeaea",
-        color: "#111",
-        cursor: "pointer",
-        fontWeight: 700,
-        fontSize: 13,
-        ...(props.style ?? {}),
-      }}
-    />
-  );
-}
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-export function RelatorioPorPessoaPage() {
-  const [relatorio, setRelatorio] = useState<RelatorioPorPessoaResponse | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -57,13 +18,62 @@ export function RelatorioPorPessoaPage() {
     setErro(null);
 
     try {
-      const response = await http.get<RelatorioPorPessoaResponse>("/api/relatorios/por-pessoa");
-      setRelatorio(response.data);
+      const data = await listarPessoas();
+      setPessoas(data);
     } catch {
-      setErro("Não foi possível gerar o relatório por pessoa.");
-      setRelatorio(null);
+      setErro("Não foi possível carregar as pessoas.");
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function handleCriar(e: React.FormEvent) {
+    e.preventDefault();
+
+    const nomeLimpo = nome.trim();
+    const idadeLimpa = idadeStr.trim();
+
+    if (!nomeLimpo) {
+      setErro("Nome é obrigatório.");
+      return;
+    }
+
+    if (!idadeLimpa) {
+      setErro("Idade é obrigatória.");
+      return;
+    }
+
+    if (!/^\d+$/.test(idadeLimpa)) {
+      setErro("Idade deve conter apenas números.");
+      return;
+    }
+
+    const idade = Number(idadeLimpa);
+    if (!Number.isFinite(idade)) {
+      setErro("Idade inválida.");
+      return;
+    }
+
+    setErro(null);
+
+    try {
+      await criarPessoa({ nome: nomeLimpo, idade });
+      setNome("");
+      setIdadeStr("");
+      await carregar();
+    } catch {
+      setErro("Não foi possível criar a pessoa.");
+    }
+  }
+
+  async function handleDeletar(id: number) {
+    setErro(null);
+
+    try {
+      await deletarPessoa(id);
+      await carregar();
+    } catch {
+      setErro("Não foi possível excluir a pessoa.");
     }
   }
 
@@ -71,90 +81,115 @@ export function RelatorioPorPessoaPage() {
     carregar();
   }, []);
 
+  const nomeInvalido = !nome.trim();
+  const idadeInvalida = !idadeStr.trim();
+
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      {/* Cabeçalho */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+    <div className="page-grid">
+      <div className="page-header">
         <div>
-          <h2 style={{ margin: 0 }}>Relatório por pessoa</h2>
-          <p style={{ margin: "6px 0 0", color: "#666", fontSize: 13 }}>
-            Totais de receitas, despesas e saldo agrupados por pessoa.
-          </p>
+          <h2>Pessoas</h2>
+          <p className="page-subtitle">Cadastre pessoas para associar às transações.</p>
         </div>
 
-        <Button onClick={carregar} disabled={carregando}>
-          Regerar relatório
+        <Button variant="ghost" onClick={carregar} disabled={carregando}>
+          Recarregar
         </Button>
       </div>
 
-      {erro && (
-        <Card title="Erro">
-          <p style={{ margin: 0, color: "crimson" }}>{erro}</p>
-        </Card>
-      )}
+      <Card title="Nova pessoa">
+        <form onSubmit={handleCriar} className="form-grid">
+          <div className="field">
+            <label>Nome</label>
+            <Input
+              placeholder="Ex.: Aziz"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              hasError={!!erro && nomeInvalido}
+            />
+          </div>
 
-      {carregando && (
-        <Card title="Carregando">
-          <p style={{ margin: 0, color: "#666" }}>Gerando relatório...</p>
-        </Card>
-      )}
+          <div className="field">
+            <label>Idade</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="Ex.: 20"
+              value={idadeStr}
+              onChange={(e) => {
+                const valor = e.target.value;
+                if (/^\d*$/.test(valor)) setIdadeStr(valor);
+              }}
+              hasError={!!erro && idadeInvalida}
+            />
+          </div>
 
-      {/* Resumo */}
-      {relatorio && (
-        <div style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          <Card title="Total de receitas">
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#444" }}>{formatBRL(relatorio.totalGeralReceitas)}</div>
-          </Card>
+          <div className="btn-row">
+            <Button type="submit" disabled={carregando}>
+              Criar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setNome("");
+                setIdadeStr("");
+                setErro(null);
+              }}
+            >
+              Limpar
+            </Button>
+          </div>
+        </form>
 
-          <Card title="Total de despesas">
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#444" }}>{formatBRL(relatorio.totalGeralDespesas)}</div>
-          </Card>
+        {erro && <p className="status-error">{erro}</p>}
+        {carregando && <p className="status-muted">Carregando...</p>}
+      </Card>
 
-          <Card title="Saldo líquido">
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#444" }}>{formatBRL(relatorio.saldoLiquido)}</div>
-          </Card>
-        </div>
-      )}
+      <Card
+        title="Lista de pessoas"
+        right={<span className="badge">{pessoas.length} itens</span>}
+      >
+        {!carregando && !erro && pessoas.length === 0 && (
+          <div className="empty-state">
+            <p>Nenhuma pessoa cadastrada.</p>
+          </div>
+        )}
 
-      {/* Tabela */}
-      {relatorio && (
-        <Card
-          title="Detalhamento"
-          right={<span style={{ fontSize: 12, color: "#666" }}>{relatorio.itens.length} pessoas</span>}
-        >
-          {relatorio.itens.length === 0 ? (
-            <p style={{ margin: 0, color: "#666" }}>Não há transações para compor o relatório.</p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ textAlign: "center", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                    <th style={{ padding: "10px 8px", fontSize: 12, color: "#666" }}>Pessoa</th>
-                    <th style={{ padding: "10px 8px", fontSize: 12, color: "#666" }}>Receitas</th>
-                    <th style={{ padding: "10px 8px", fontSize: 12, color: "#666" }}>Despesas</th>
-                    <th style={{ padding: "10px 8px", fontSize: 12, color: "#666" }}>Saldo</th>
+        {pessoas.length > 0 && (
+          <div className="table-scroll">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nome</th>
+                  <th>Idade</th>
+                  <th className="col-actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pessoas.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.id}</td>
+                    <td>{p.nome}</td>
+                    <td>{p.idade}</td>
+                    <td>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        onClick={() => handleDeletar(p.id)}
+                        aria-label={`Excluir ${p.nome}`}
+                      >
+                        Excluir
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-
-                <tbody>
-                  {relatorio.itens.map((i) => (
-                    <tr key={i.pessoa.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                      <td style={{ padding: "10px 8px", fontSize: 13, fontWeight: 700 }}>
-                        {i.pessoa.nome}
-                      </td>
-                      <td style={{ padding: "10px 8px", fontSize: 13 }}>{formatBRL(i.totalReceitas)}</td>
-                      <td style={{ padding: "10px 8px", fontSize: 13 }}>{formatBRL(i.totalDespesas)}</td>
-                      <td style={{ padding: "10px 8px", fontSize: 13, fontWeight: 700 }}>
-                        {formatBRL(i.saldo)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
