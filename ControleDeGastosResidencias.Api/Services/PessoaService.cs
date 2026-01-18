@@ -36,17 +36,6 @@ namespace ControleDeGastosResidencias.Api.Services
             };
         }
 
-        public async Task DeletePessoaAsync(int id)
-        {
-            var pessoa = await _db.Pessoas.FirstOrDefaultAsync(p => p.Id == id);
-
-            if (pessoa == null)
-                throw new KeyNotFoundException("Pessoa não Encontrada");
-
-            _db.Pessoas.Remove(pessoa);
-            await _db.SaveChangesAsync();
-        }
-
         //Retornar lista apenas para leitura
         public async Task<IReadOnlyList<PessoaResponse>> ListarPessoasAsync()
         {
@@ -60,5 +49,17 @@ namespace ControleDeGastosResidencias.Api.Services
                 })
                 .ToListAsync();
         }
+
+        public async Task DeletePessoaAsync(int id)
+        {
+            var pessoa = await _db.Pessoas.FirstOrDefaultAsync(p => p.Id == id);
+
+            if (pessoa == null)
+                throw new KeyNotFoundException("Pessoa não Encontrada");
+
+            _db.Pessoas.Remove(pessoa);
+            await _db.SaveChangesAsync();
+        }
+
     }
 }
