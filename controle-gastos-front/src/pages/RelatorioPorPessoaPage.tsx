@@ -1,15 +1,29 @@
 import { useEffect, useState } from "react";
-import { criarPessoa, listarPessoas, deletarPessoa } from "../api/pessoas";
-import type { PessoaResponse } from "../types/pessoa";
-import { Card } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
+import { http } from "../api/http";
+import type { RelatorioPorPessoaResponse } from "../types/relatorio";
 
-export function PessoaFormularioPage() {
-  const [pessoas, setPessoas] = useState<PessoaResponse[]>([]);
-  const [nome, setNome] = useState("");
-  const [idadeStr, setIdadeStr] = useState("");
+function Card(props: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h3 className="card-title">{props.title}</h3>
+        {props.right}
+      </div>
+      <div className="card-content">{props.children}</div>
+    </section>
+  );
+}
 
+function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button {...props} className={`btn btn-secondary ${props.className ?? ""}`.trim()} />;
+}
+
+function formatBRL(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export function RelatorioPorPessoaPage() {
+  const [relatorio, setRelatorio] = useState<RelatorioPorPessoaResponse | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -18,62 +32,13 @@ export function PessoaFormularioPage() {
     setErro(null);
 
     try {
-      const data = await listarPessoas();
-      setPessoas(data);
+      const response = await http.get<RelatorioPorPessoaResponse>("/api/relatorios/por-pessoa");
+      setRelatorio(response.data);
     } catch {
-      setErro("Não foi possível carregar as pessoas.");
+      setErro("Não foi possível gerar o relatório por pessoa.");
+      setRelatorio(null);
     } finally {
       setCarregando(false);
-    }
-  }
-
-  async function handleCriar(e: React.FormEvent) {
-    e.preventDefault();
-
-    const nomeLimpo = nome.trim();
-    const idadeLimpa = idadeStr.trim();
-
-    if (!nomeLimpo) {
-      setErro("Nome é obrigatório.");
-      return;
-    }
-
-    if (!idadeLimpa) {
-      setErro("Idade é obrigatória.");
-      return;
-    }
-
-    if (!/^\d+$/.test(idadeLimpa)) {
-      setErro("Idade deve conter apenas números.");
-      return;
-    }
-
-    const idade = Number(idadeLimpa);
-    if (!Number.isFinite(idade)) {
-      setErro("Idade inválida.");
-      return;
-    }
-
-    setErro(null);
-
-    try {
-      await criarPessoa({ nome: nomeLimpo, idade });
-      setNome("");
-      setIdadeStr("");
-      await carregar();
-    } catch {
-      setErro("Não foi possível criar a pessoa.");
-    }
-  }
-
-  async function handleDeletar(id: number) {
-    setErro(null);
-
-    try {
-      await deletarPessoa(id);
-      await carregar();
-    } catch {
-      setErro("Não foi possível excluir a pessoa.");
     }
   }
 
@@ -81,115 +46,86 @@ export function PessoaFormularioPage() {
     carregar();
   }, []);
 
-  const nomeInvalido = !nome.trim();
-  const idadeInvalida = !idadeStr.trim();
-
   return (
     <div className="page-grid">
+      {/* Cabeçalho */}
       <div className="page-header">
         <div>
-          <h2>Pessoas</h2>
-          <p className="page-subtitle">Cadastre pessoas para associar às transações.</p>
+          <h2>Relatório por pessoa</h2>
+          <p className="page-subtitle">
+            Totais de receitas, despesas e saldo agrupados por pessoa.
+          </p>
         </div>
 
-        <Button variant="ghost" onClick={carregar} disabled={carregando}>
-          Recarregar
+        <Button onClick={carregar} disabled={carregando}>
+          Regerar relatório
         </Button>
       </div>
 
-      <Card title="Nova pessoa">
-        <form onSubmit={handleCriar} className="form-grid">
-          <div className="field">
-            <label>Nome</label>
-            <Input
-              placeholder="Ex.: Aziz"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              hasError={!!erro && nomeInvalido}
-            />
-          </div>
+      {erro && (
+        <Card title="Erro">
+          <p className="status-error no-margin">{erro}</p>
+        </Card>
+      )}
 
-          <div className="field">
-            <label>Idade</label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="Ex.: 20"
-              value={idadeStr}
-              onChange={(e) => {
-                const valor = e.target.value;
-                if (/^\d*$/.test(valor)) setIdadeStr(valor);
-              }}
-              hasError={!!erro && idadeInvalida}
-            />
-          </div>
+      {carregando && (
+        <Card title="Carregando">
+          <p className="status-muted no-margin">Gerando relatório...</p>
+        </Card>
+      )}
 
-          <div className="btn-row">
-            <Button type="submit" disabled={carregando}>
-              Criar
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setNome("");
-                setIdadeStr("");
-                setErro(null);
-              }}
-            >
-              Limpar
-            </Button>
-          </div>
-        </form>
+      {/* Resumo */}
+      {relatorio && (
+        <div className="kpi-grid">
+          <Card title="Total de receitas">
+            <div className="kpi-value">{formatBRL(relatorio.totalGeralReceitas)}</div>
+          </Card>
 
-        {erro && <p className="status-error">{erro}</p>}
-        {carregando && <p className="status-muted">Carregando...</p>}
-      </Card>
+          <Card title="Total de despesas">
+            <div className="kpi-value">{formatBRL(relatorio.totalGeralDespesas)}</div>
+          </Card>
 
-      <Card
-        title="Lista de pessoas"
-        right={<span className="badge">{pessoas.length} itens</span>}
-      >
-        {!carregando && !erro && pessoas.length === 0 && (
-          <div className="empty-state">
-            <p>Nenhuma pessoa cadastrada.</p>
-          </div>
-        )}
+          <Card title="Saldo líquido">
+            <div className="kpi-value">{formatBRL(relatorio.saldoLiquido)}</div>
+          </Card>
+        </div>
+      )}
 
-        {pessoas.length > 0 && (
-          <div className="table-scroll">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Nome</th>
-                  <th>Idade</th>
-                  <th className="col-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pessoas.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td>{p.nome}</td>
-                    <td>{p.idade}</td>
-                    <td>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={() => handleDeletar(p.id)}
-                        aria-label={`Excluir ${p.nome}`}
-                      >
-                        Excluir
-                      </Button>
-                    </td>
+      {/* Tabela */}
+      {relatorio && (
+        <Card
+          title="Detalhamento"
+          right={<span className="badge">{relatorio.itens.length} pessoas</span>}
+        >
+          {relatorio.itens.length === 0 ? (
+            <p className="text-muted">Não há transações para compor o relatório.</p>
+          ) : (
+            <div className="table-scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Pessoa</th>
+                    <th>Receitas</th>
+                    <th>Despesas</th>
+                    <th>Saldo</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+                </thead>
+
+                <tbody>
+                  {relatorio.itens.map((i) => (
+                    <tr key={i.pessoa.id}>
+                      <td className="fw-700">{i.pessoa.nome}</td>
+                      <td>{formatBRL(i.totalReceitas)}</td>
+                      <td>{formatBRL(i.totalDespesas)}</td>
+                      <td className="fw-700">{formatBRL(i.saldo)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

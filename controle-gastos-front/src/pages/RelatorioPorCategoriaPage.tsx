@@ -1,15 +1,29 @@
 import { useEffect, useState } from "react";
 import { http } from "../api/http";
-import type { RelatorioPorPessoaResponse } from "../types/relatorio";
-import { Card } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
+import type { RelatorioPorCategoriaResponse } from "../types/relatorio";
+
+function Card(props: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h3 className="card-title">{props.title}</h3>
+        {props.right}
+      </div>
+      <div className="card-content">{props.children}</div>
+    </section>
+  );
+}
+
+function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button {...props} className={`btn btn-secondary ${props.className ?? ""}`.trim()} />;
+}
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function RelatorioPorPessoaPage() {
-  const [relatorio, setRelatorio] = useState<RelatorioPorPessoaResponse | null>(null);
+export function RelatorioPorCategoriaPage() {
+  const [relatorio, setRelatorio] = useState<RelatorioPorCategoriaResponse | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -18,10 +32,10 @@ export function RelatorioPorPessoaPage() {
     setErro(null);
 
     try {
-      const response = await http.get<RelatorioPorPessoaResponse>("/api/relatorios/por-pessoa");
+      const response = await http.get<RelatorioPorCategoriaResponse>("/api/relatorios/por-categoria");
       setRelatorio(response.data);
     } catch {
-      setErro("Não foi possível gerar o relatório por pessoa.");
+      setErro("Não foi possível gerar o relatório por categoria.");
       setRelatorio(null);
     } finally {
       setCarregando(false);
@@ -34,31 +48,37 @@ export function RelatorioPorPessoaPage() {
 
   return (
     <div className="page-grid">
+      {/* Cabeçalho */}
       <div className="page-header">
         <div>
-          <h2>Relatório por pessoa</h2>
+          <h2>Relatório por categoria</h2>
           <p className="page-subtitle">
-            Totais de receitas, despesas e saldo agrupados por pessoa.
+            Totais de receitas, despesas e saldo agrupados por categoria.
           </p>
         </div>
 
-        <Button variant="secondary" onClick={carregar} disabled={carregando}>
+        <Button onClick={carregar} disabled={carregando}>
           Regerar relatório
         </Button>
       </div>
 
       {erro && (
         <Card title="Erro">
-          <p className="status-error" style={{ marginTop: 0 }}>{erro}</p>
+          <p className="status-error" style={{ marginTop: 0 }}>
+            {erro}
+          </p>
         </Card>
       )}
 
       {carregando && (
         <Card title="Carregando">
-          <p className="status-muted" style={{ marginTop: 0 }}>Gerando relatório...</p>
+          <p className="status-muted" style={{ marginTop: 0 }}>
+            Gerando relatório...
+          </p>
         </Card>
       )}
 
+      {/* Resumo */}
       {relatorio && (
         <div className="kpi-grid">
           <Card title="Total de receitas">
@@ -75,10 +95,11 @@ export function RelatorioPorPessoaPage() {
         </div>
       )}
 
+      {/* Tabela */}
       {relatorio && (
         <Card
           title="Detalhamento"
-          right={<span className="badge">{relatorio.itens.length} pessoas</span>}
+          right={<span className="badge">{relatorio.itens.length} categorias</span>}
         >
           {relatorio.itens.length === 0 ? (
             <p className="text-muted">Não há transações para compor o relatório.</p>
@@ -87,7 +108,7 @@ export function RelatorioPorPessoaPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Pessoa</th>
+                    <th>Categoria</th>
                     <th>Receitas</th>
                     <th>Despesas</th>
                     <th>Saldo</th>
@@ -96,8 +117,8 @@ export function RelatorioPorPessoaPage() {
 
                 <tbody>
                   {relatorio.itens.map((i) => (
-                    <tr key={i.pessoa.id}>
-                      <td className="fw-700">{i.pessoa.nome}</td>
+                    <tr key={i.categoria.id}>
+                      <td className="fw-700">{i.categoria.descricao}</td>
                       <td>{formatBRL(i.totalReceitas)}</td>
                       <td>{formatBRL(i.totalDespesas)}</td>
                       <td className="fw-700">{formatBRL(i.saldo)}</td>
