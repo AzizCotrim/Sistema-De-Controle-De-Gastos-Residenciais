@@ -16,6 +16,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<PessoaService>();
 builder.Services.AddScoped<CategoriaService>();
 builder.Services.AddScoped<TransacaoService>();
+builder.Services.AddScoped<ReportsService>();
 
 //DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

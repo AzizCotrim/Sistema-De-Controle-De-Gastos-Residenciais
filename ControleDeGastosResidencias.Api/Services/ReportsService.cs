@@ -17,65 +17,85 @@ namespace ControleDeGastosResidencias.Api.Services
 
         public async Task<List<RelatorioPorPessoaItemResponse>> ReportItemPorPessoa()
         {
-            var itens = await (
-                        from t in _db.Transacoes
-                        join p in _db.Pessoas on t.PessoaId equals p.Id
-                        group t by new { p.Id, p.Nome } into g
-
-                        select new RelatorioPorPessoaItemResponse
-                        {
-                            Pessoa = new PessoaResumoResponse
-                            {
-                                Id = g.Key.Id,
-                                Nome = g.Key.Nome
-                            },
-                            TotalReceitas = g.Sum(x =>
-                                x.Tipo == TipoTransacao.Receita ? x.Valor : 0
-                            ),
-                            TotalDespesas = g.Sum(x =>
-                                x.Tipo == TipoTransacao.Despesa ? x.Valor : 0
-                            ),
-                            Saldo =
-                                g.Sum(x => x.Tipo == TipoTransacao.Receita ? x.Valor : 0)
-                              - g.Sum(x => x.Tipo == TipoTransacao.Despesa ? x.Valor : 0)
-                        }
-
+            // 1) traz dados "flat" do banco
+            var rows = await (
+                from t in _db.Transacoes.AsNoTracking()
+                join p in _db.Pessoas.AsNoTracking() on t.PessoaId equals p.Id
+                select new
+                {
+                    PessoaId = p.Id,
+                    PessoaNome = p.Nome,
+                    t.Tipo,
+                    t.Valor
+                }
             ).ToListAsync();
+
+            // 2) agrupa e soma em memória (aqui decimal funciona)
+            var itens = rows
+                .GroupBy(x => new { x.PessoaId, x.PessoaNome })
+                .Select(g =>
+                {
+                    var totalReceitas = g.Where(x => x.Tipo == TipoTransacao.Receita).Sum(x => x.Valor);
+                    var totalDespesas = g.Where(x => x.Tipo == TipoTransacao.Despesa).Sum(x => x.Valor);
+
+                    return new RelatorioPorPessoaItemResponse
+                    {
+                        Pessoa = new PessoaResumoResponse
+                        {
+                            Id = g.Key.PessoaId,
+                            Nome = g.Key.PessoaNome
+                        },
+                        TotalReceitas = totalReceitas,
+                        TotalDespesas = totalDespesas,
+                        Saldo = totalReceitas - totalDespesas
+                    };
+                })
+                .ToList();
 
             return itens;
         }
+
 
         public async Task<List<RelatorioPorCategoriaItemResponse>> ReportItemPorCategoria()
         {
-            var itens = await (
-                        from t in _db.Transacoes
-                        join c in _db.Categorias on t.PessoaId equals c.Id
-                        group t by new { c.Id, c.Descricao } into g
+            var rows = await (
+                from t in _db.Transacoes.AsNoTracking()
+                join c in _db.Categorias.AsNoTracking() on t.CategoriaId equals c.Id
+                select new
+                {
+                    CategoriaId = c.Id,
+                    CategoriaDescricao = c.Descricao,
+                    t.Tipo,
+                    t.Valor
+                }
 
-                        select new RelatorioPorCategoriaItemResponse
+                ).ToListAsync();
+
+            var itens = rows
+                .GroupBy(x => new { x.CategoriaId, x.CategoriaDescricao })
+                .Select(g =>
+                {
+                    var totalReceitas = g.Where(x => x.Tipo == TipoTransacao.Receita).Sum(x => x.Valor);
+                    var totalDespesas = g.Where(x => x.Tipo == TipoTransacao.Despesa).Sum(x => x.Valor);
+
+                    return new RelatorioPorCategoriaItemResponse
+                    {
+                        Categoria = new CategoriaResumoResponse
                         {
-                            Categoria = new CategoriaResumoResponse
-                            {
-                                Id = g.Key.Id,
-                                Descricao = g.Key.Descricao
-                            },
-                            TotalReceitas = g.Sum(x =>
-                                x.Tipo == TipoTransacao.Receita ? x.Valor : 0
-                            ),
-                            TotalDespesas = g.Sum(x =>
-                                x.Tipo == TipoTransacao.Despesa ? x.Valor : 0
-                            ),
-                            Saldo =
-                                g.Sum(x => x.Tipo == TipoTransacao.Receita ? x.Valor : 0)
-                              - g.Sum(x => x.Tipo == TipoTransacao.Despesa ? x.Valor : 0)
-                        }
-
-            ).ToListAsync();
+                            Id = g.Key.CategoriaId,
+                            Descricao = g.Key.CategoriaDescricao
+                        },
+                        TotalReceitas = totalReceitas,
+                        TotalDespesas = totalDespesas,
+                        Saldo = totalReceitas - totalDespesas
+                    };
+                })
+                .ToList();
 
             return itens;
         }
 
-        public async Task<RelatorioPorPessoaResponse> ReportTotalPorPessoa(List<RelatorioPorPessoaItemResponse> itens)
+        public RelatorioPorPessoaResponse ReportTotalPorPessoa(List<RelatorioPorPessoaItemResponse> itens)
         {
             var relatorio = new RelatorioPorPessoaResponse
             {
@@ -88,7 +108,7 @@ namespace ControleDeGastosResidencias.Api.Services
             return relatorio;
         }
 
-        public async Task<RelatorioPorCategoriaResponse> ReportTotalPorCategoria(List<RelatorioPorCategoriaItemResponse> itens)
+        public RelatorioPorCategoriaResponse ReportTotalPorCategoria(List<RelatorioPorCategoriaItemResponse> itens)
         {
             var relatorio = new RelatorioPorCategoriaResponse
             {
@@ -97,6 +117,22 @@ namespace ControleDeGastosResidencias.Api.Services
                 TotalGeralDespesas = itens.Sum(x => x.TotalDespesas),
                 SaldoLiquido = itens.Sum(x => x.Saldo),
             };
+
+            return relatorio;
+        }
+
+        public async Task<RelatorioPorPessoaResponse> GeralRelatorioPorPessoa()
+        {
+            var itens = await ReportItemPorPessoa();
+            var relatorio = ReportTotalPorPessoa(itens);
+
+            return relatorio;
+        }
+
+        public async Task<RelatorioPorCategoriaResponse> GeralRelatorioPorCategoria()
+        {
+            var itens = await ReportItemPorCategoria();
+            var relatorio = ReportTotalPorCategoria(itens);
 
             return relatorio;
         }

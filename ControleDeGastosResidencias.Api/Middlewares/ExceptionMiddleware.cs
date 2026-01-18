@@ -46,7 +46,7 @@ namespace ControleDeGastosResidencias.Api.Middlewares
                 InvalidOperationException => (StatusCodes.Status400BadRequest, ex.Message),
                 ArgumentException => (StatusCodes.Status400BadRequest, ex.Message),
 
-                _ => (StatusCodes.Status500InternalServerError, "Erro inesperado")
+                _ => (StatusCodes.Status500InternalServerError, "Erro inesperado - " + ex.Message)
             };
         }
 
