@@ -20,7 +20,7 @@ namespace ControleDeGastosResidencias.Api.Services
             if (string.IsNullOrWhiteSpace(request.Descricao))
                 throw new InvalidOperationException("A descricao e obrigatoria");
 
-            // Remove the null check for value type enum, and instead check for a valid enum value if needed
+            
             if (!Enum.IsDefined(typeof(TipoFinalidadeCategoria), request.Finalidade))
                 throw new InvalidOperationException("A finalidade é obrigatória");
 
@@ -48,6 +48,17 @@ namespace ControleDeGastosResidencias.Api.Services
                     Finalidade = c.Finalidade
                 })
                 .ToListAsync();
+        }
+
+        public async Task DeleteCategoriaAsync(int id)
+        {
+            var categoria = await _db.Categorias.FirstOrDefaultAsync(c => c.Id == id);
+
+            if (categoria == null)
+                throw new KeyNotFoundException("Categoria não Encontrada");
+
+            _db.Categorias.Remove(categoria);
+            await _db.SaveChangesAsync();
         }
     }
 }

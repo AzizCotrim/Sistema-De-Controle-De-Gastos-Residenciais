@@ -101,5 +101,16 @@ namespace ControleDeGastosResidencias.Api.Services
 
             return await query.ToListAsync();
         }
+
+        public async Task DeleteTransacaoAsync(int id)
+        {
+            var transacao = await _db.Transacoes.FirstOrDefaultAsync(t => t.Id == id);
+
+            if (transacao == null)
+                throw new KeyNotFoundException("Categoria não Encontrada");
+
+            _db.Transacoes.Remove(transacao);
+            await _db.SaveChangesAsync();
+        }
     }
 }
