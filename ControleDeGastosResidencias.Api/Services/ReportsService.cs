@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ControleDeGastosResidencias.Api.Services
 {
+    // Serviço de relatórios (somente leitura).
+    // Responsável por gerar agregações (totais e saldo) por Pessoa e por Categoria.
     public class ReportsService
     {
         private readonly AppDbContext _db;
@@ -17,7 +19,9 @@ namespace ControleDeGastosResidencias.Api.Services
 
         public async Task<List<RelatorioPorPessoaItemResponse>> ReportItemPorPessoa()
         {
-            // 1) traz dados "flat" do banco
+            // Consulta read-only (AsNoTracking) e projeta dados "flat" para reduzir custo de materialização.
+            // Estratégia: traz registros simples do banco e faz a agregação em memória
+            // para manter a lógica de cálculo (decimal, saldo) clara e controlada.
             var rows = await (
                 from t in _db.Transacoes.AsNoTracking()
                 join p in _db.Pessoas.AsNoTracking() on t.PessoaId equals p.Id
@@ -30,7 +34,7 @@ namespace ControleDeGastosResidencias.Api.Services
                 }
             ).ToListAsync();
 
-            // 2) agrupa e soma em memória (aqui decimal funciona)
+            // Agrupa por pessoa e calcula: total de receitas, total de despesas e saldo (receitas - despesas).
             var itens = rows
                 .GroupBy(x => new { x.PessoaId, x.PessoaNome })
                 .Select(g =>
@@ -55,9 +59,10 @@ namespace ControleDeGastosResidencias.Api.Services
             return itens;
         }
 
-
         public async Task<List<RelatorioPorCategoriaItemResponse>> ReportItemPorCategoria()
         {
+            // Consulta read-only (AsNoTracking) e projeta dados "flat".
+            // Estratégia: traz registros simples do banco e agrega em memória para simplificar cálculos de totais e saldo.
             var rows = await (
                 from t in _db.Transacoes.AsNoTracking()
                 join c in _db.Categorias.AsNoTracking() on t.CategoriaId equals c.Id
@@ -68,9 +73,9 @@ namespace ControleDeGastosResidencias.Api.Services
                     t.Tipo,
                     t.Valor
                 }
+            ).ToListAsync();
 
-                ).ToListAsync();
-
+            // Agrupa por categoria e calcula: total de receitas, total de despesas e saldo (receitas - despesas).
             var itens = rows
                 .GroupBy(x => new { x.CategoriaId, x.CategoriaDescricao })
                 .Select(g =>
@@ -97,44 +102,40 @@ namespace ControleDeGastosResidencias.Api.Services
 
         public RelatorioPorPessoaResponse ReportTotalPorPessoa(List<RelatorioPorPessoaItemResponse> itens)
         {
-            var relatorio = new RelatorioPorPessoaResponse
+            // Monta o relatório final calculando totais gerais a partir dos itens já agregados.
+            return new RelatorioPorPessoaResponse
             {
                 Itens = itens,
                 TotalGeralReceitas = itens.Sum(x => x.TotalReceitas),
                 TotalGeralDespesas = itens.Sum(x => x.TotalDespesas),
                 SaldoLiquido = itens.Sum(x => x.Saldo),
             };
-
-            return relatorio;
         }
 
         public RelatorioPorCategoriaResponse ReportTotalPorCategoria(List<RelatorioPorCategoriaItemResponse> itens)
         {
-            var relatorio = new RelatorioPorCategoriaResponse
+            // Monta o relatório final calculando totais gerais a partir dos itens já agregados.
+            return new RelatorioPorCategoriaResponse
             {
                 Itens = itens,
                 TotalGeralReceitas = itens.Sum(x => x.TotalReceitas),
                 TotalGeralDespesas = itens.Sum(x => x.TotalDespesas),
                 SaldoLiquido = itens.Sum(x => x.Saldo),
             };
-
-            return relatorio;
         }
 
         public async Task<RelatorioPorPessoaResponse> GeralRelatorioPorPessoa()
         {
+            // Orquestra a geração do relatório: itens (por pessoa) + totais gerais.
             var itens = await ReportItemPorPessoa();
-            var relatorio = ReportTotalPorPessoa(itens);
-
-            return relatorio;
+            return ReportTotalPorPessoa(itens);
         }
 
         public async Task<RelatorioPorCategoriaResponse> GeralRelatorioPorCategoria()
         {
+            // Orquestra a geração do relatório: itens (por categoria) + totais gerais.
             var itens = await ReportItemPorCategoria();
-            var relatorio = ReportTotalPorCategoria(itens);
-
-            return relatorio;
+            return ReportTotalPorCategoria(itens);
         }
     }
 }

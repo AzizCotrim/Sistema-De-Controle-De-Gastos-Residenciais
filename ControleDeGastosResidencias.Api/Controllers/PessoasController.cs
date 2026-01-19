@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ControleDeGastosResidencias.Api.Controllers
 {
+    /// <summary>
+    /// Controlador responsável pelas operações relacionadas a Pessoas.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class PessoasController : ControllerBase
@@ -15,7 +18,13 @@ namespace ControleDeGastosResidencias.Api.Controllers
             _service = service;
         }
 
-        //POST: Criar Pessoa
+        /// <summary>
+        /// Cria uma nova pessoa.
+        /// </summary>
+        /// <param name="request">Dados da pessoa a ser criada.</param>
+        /// <returns>Objeto da pessoa criada.</returns>
+        /// <response code="201">Pessoa criada com sucesso.</response>
+        /// <response code="400">Dados inválidos.</response>
         [HttpPost]
         public async Task<ActionResult<PessoaResponse>> Criar(PessoaCreateRequest request)
         {
@@ -23,24 +32,28 @@ namespace ControleDeGastosResidencias.Api.Controllers
             return Created(string.Empty, pessoa);
         }
 
-        //LEMBRETE: Criar busca por id em todos os controllers
-
-
-        //GET: Listar Todas As Pessoas
+        /// <summary>
+        /// Retorna a lista de todas as pessoas cadastradas.
+        /// </summary>
+        /// <returns>Lista de pessoas.</returns>
+        /// <response code="200">Lista retornada com sucesso.</response>
         [HttpGet]
         public async Task<ActionResult<IReadOnlyList<PessoaResponse>>> Listar()
         {
             var pessoas = await _service.ListarPessoasAsync();
-
             return Ok(pessoas);
         }
 
-        //DELETE: Deletar Pessoa 
+        /// <summary>
+        /// Remove uma pessoa pelo identificador.
+        /// </summary>
+        /// <param name="id">Identificador da pessoa.</param>
+        /// <response code="204">Pessoa removida com sucesso.</response>
+        /// <response code="404">Pessoa não encontrada.</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletar(int id)
         {
             await _service.DeletePessoaAsync(id);
-
             return NoContent();
         }
     }
