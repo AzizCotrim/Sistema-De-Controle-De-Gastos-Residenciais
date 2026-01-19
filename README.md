@@ -87,6 +87,15 @@ Todo o ambiente pode ser executado com **um único comando**, sem necessidade de
 └── README.md
 
 ````
+---
+
+## 📥 Como Clonar o Repositório
+
+Para clonar o projeto em sua máquina local, execute o comando abaixo no terminal:
+
+```bash
+git clone https://github.com/AzizCotrim/Sistema-De-Controle-De-Gastos-Residenciais.git
+```
 
 ---
 
