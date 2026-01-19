@@ -29,7 +29,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("ReactApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -38,19 +38,26 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope()) {
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment()) {
+    app.UseHttpsRedirection();
+}
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-app.UseAuthorization();
-
 app.UseCors("ReactApp");
+
+app.UseAuthorization();
 
 app.MapControllers();
 

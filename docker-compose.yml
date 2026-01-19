@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: ./ControleDeGastosResidencias.Api
+    container_name: controle-gastos-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - sqlite-data:/app/Data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+  front:
+    build:
+      context: ./controle-gastos-front
+    container_name: controle-gastos-front
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  sqlite-data:
